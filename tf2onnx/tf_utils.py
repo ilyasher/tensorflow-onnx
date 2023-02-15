@@ -175,8 +175,6 @@ def compute_const_folding_using_tf(g, const_node_values, graph_outputs):
     ops = g.get_operations()
     outputs_to_values = {}
     outputs_to_dtypes = {}
-    outputs_to_shapes = {}
-    shape_node_outputs = {}
 
     def is_small_shape(x):
         return np.product(x) <= 1000
@@ -192,14 +190,6 @@ def compute_const_folding_using_tf(g, const_node_values, graph_outputs):
                 tensor.tensor_content = const_node_values[node.name]
             outputs_to_values[node.outputs[0].name] = get_tf_tensor_data(tensor)
             outputs_to_dtypes[node.outputs[0].name] = node.outputs[0].dtype
-        for out in node.outputs:
-            outputs_to_shapes[out.name] = get_tf_tensor_shape(out)
-
-    for node in ops:
-        if node.type == "Shape":
-            shape = outputs_to_shapes.get(node.inputs[0].name)
-            if shape is not None:
-                shape_node_outputs[node.outputs[0].name] = shape
 
     unneeded_outputs = set()
     progress = True
@@ -209,16 +199,6 @@ def compute_const_folding_using_tf(g, const_node_values, graph_outputs):
             # Find ops with constant inputs and compute their values
             input_names = [i.name for i in node.inputs]
             output_names = [i.name for i in node.outputs]
-            if node.type == 'StridedSlice' and input_names[0] in shape_node_outputs \
-                                           and output_names[0] not in outputs_to_values \
-                                           and output_names[0] not in unneeded_outputs:
-                shape = shape_node_outputs[input_names[0]]
-                i = get_index_from_strided_slice_of_shape(node, outputs_to_values)
-                if i is not None and 0 <= i < len(shape) and shape[i] is not None:
-                    np_dtype = map_onnx_to_numpy_type(map_tf_dtype(node.outputs[0].dtype))
-                    outputs_to_values[output_names[0]] = np.array(shape[i], dtype=np_dtype)
-                    outputs_to_dtypes[node.outputs[0].name] = node.outputs[0].dtype
-                    progress = True
             can_fold = node.type not in ['Enter', 'Placeholder', 'PlaceholderWithDefault', 'Switch', 'Merge',
                                          'NextIteration', 'Exit', 'QuantizeAndDequantizeV2', 'QuantizeAndDequantizeV3',
                                          'QuantizeAndDequantizeV4']
