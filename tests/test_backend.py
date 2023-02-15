@@ -1427,6 +1427,13 @@ class BackendTests(Tf2OnnxBackendTestBase):
             return tf.identity(x_, name=_TFOUTPUT)
         self._run_test_case(func, [_OUTPUT], {_INPUT: x_val})
 
+    def test_sequeeze_no_axis2(self):
+        x_val = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32).reshape((1, 2, 2))
+        def func(x):
+            x_ = tf.squeeze(x)
+            return tf.identity(x_, name=_TFOUTPUT)
+        self._run_test_case(func, [_OUTPUT], {_INPUT: x_val})
+
     @check_opset_min_version(11, "Pad")
     def test_sequeeze_no_axis_specified_unknown_rank(self):
         x_val = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float32)

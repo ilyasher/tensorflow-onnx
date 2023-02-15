@@ -214,6 +214,13 @@ class Squeeze:
             else:
                 axes_const = ctx.make_const(utils.make_name("axes_const"), np.array(axes, dtype=np.int64))
                 ctx.replace_inputs(node, [node.input[0], axes_const.output[0]])
+        else:
+            # Unlike TF, ONNX requires that at least one axis can be squeezed.
+            shape = ctx.get_shape(node.input[0])
+            # FIXME
+            if shape is not None:
+                if 1 not in shape:
+                    node.type = "Identity"
 
     @classmethod
     def version_11(cls, ctx, node, **kwargs):
